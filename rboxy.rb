@@ -1,3 +1,6 @@
+
+require 'pry'
+require '/home/gtraub/projects/rboxy/binders/js/knockout.rb'
 module Rboxy
   #Language class will be the core HTML generator
   #implements the bare rules for generating an HTML element
@@ -9,7 +12,11 @@ module Rboxy
     attr_reader :css_output, :js_output, :html_output
 
     def initialize obj
-      @output = ''
+      @output = {
+      	html: '',
+      	js: '',
+      	css: ''
+      }
       @css_output = ''
       @js_output = ''
       @html_output = ''
@@ -17,7 +24,9 @@ module Rboxy
       @html_objects = []
       @css_objects = []
       @js_objects = []
-
+      @binders = {
+      	js: Rboxy::Binders::Knockout
+      }
       @object_nest = []
       @object_index = nil
       @object_counter = 0
@@ -40,8 +49,6 @@ module Rboxy
      
     def bind enum
       reset
-      
-      
       return @html_output
     end
     
@@ -57,6 +64,7 @@ module Rboxy
       @object_counter = 0
       @object_index_topology = []
       @page_fragments = []
+
     end
 
     def box_tags
@@ -73,7 +81,7 @@ module Rboxy
     #essential keys that non empty objects need for processing
     #and should be part of the core object language
     def object_keys
-      [:tag, :has, :bind]
+      [:tag, :has]
     end
 
     def generate_id
@@ -88,10 +96,11 @@ module Rboxy
           t = Rboxy::StringInput.handle(val)
         when Hash #hash is an html object 
           @current = default_object.merge(val)
-          
           t = make_object
         when Array #array just means you have another collection of objects or strings
           val.each{|v| t << method_command(v)}
+        when Boolean
+        when Integer 
       end
       return t
     end
@@ -108,10 +117,18 @@ module Rboxy
         #by the user, a module, or caught by method_missing
         keys = @current.keys
         (keys - object_keys).each do |key|
-           t = Rboxy::MethodHandler.send((key.to_s+'_method').to_sym, @current[key], @current)
-           if (t.instance_of?(String) && !t.empty?)
-             html_acc << " #{t}"
-           end
+          t = Rboxy::MethodHandler.send((key.to_s+'_method').to_sym, @current[key], @current)
+          if (t.instance_of?(String) && !t.empty?)
+            html_acc << " #{t}"
+          else
+            if @binders.values.include? t.class
+            	case @binders.invert[t.class].to_s
+								when 'js'
+									@js_output<< t.js 
+									html_acc << " #{t.html_attr}"
+							end           	
+            end
+          end
         end
         html_acc << close_object
         #if nest is empty then string can be returned to final HTML output
@@ -133,6 +150,7 @@ module Rboxy
     end
     #this is where the magic starts to generate the next nested object
     def close_object
+      
       #check out the objects collection or HTML children if you will
       has = (@current.has_key?(:has) ? method_command(@current[:has]) : '')
       output = (!inline_tags.index(@current[:tag]) ? ">#{has}</#{@current[:tag]}>" : " />")
@@ -171,7 +189,6 @@ module Rboxy
       parts = val.to_s.match(/([a-zA-Z]+)_method\z/)
       #default match
       if(parts.length == 2)
-
         return "#{parts[1]}=\"#{args[0]}\""
       else
         #do nothing without raising error
@@ -183,7 +200,11 @@ module Rboxy
     def self.bind_method(arg, obj)
       binder = Rboxy::Binders::Knockout.new(arg, obj)
       binder.bind
-      binder.html_attr
+      binder
+    end
+
+    def self.css_method(arg,obj)
+
     end
     #or just define a handler here ending with '_method'
     #so {id: 'blah'}  becomes MethodHandler.id_method('blah')
@@ -199,7 +220,7 @@ if(!ARGV.empty? && ($0 == __FILE__))
     contents = file.read
     v = eval(contents)
     t = Rboxy::Builder.new(v)
-    puts t.html_output
+    puts t.html_output + '<script type="text/javascript">'+t.js_output+'</script>'
   end 
 end
 

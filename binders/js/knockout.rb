@@ -2,12 +2,10 @@ module Rboxy
   module Binders
     class Knockout
       
-      attr_accessor :html_attr, :css, :js
+      attr_accessor :html_attr, :js
      #ini
-      def initialize command obj
-        @html = []
-        @css =  []
-        @js = []
+      def initialize command, obj
+        @js = ''
         @html_attr = ''
         @command = command
         @obj = obj
@@ -21,15 +19,16 @@ module Rboxy
       def interpret_string 
         #matching strings starting with a ko binder
         t = @command.match(/(\A[a-zA-Z]{2,12}):\s([a-zA-Z]+)/)
-        @html_attr = "data-bind=\"@command\""
+        @html_attr = "data-bind=\"#{@command}\""
         if t == nil
           return @command
           #just give back string
         else
           case t[1].to_s
           when 'foreach'
-            model = t[2].to_s             
+            observable_array t[2].to_s       
           when 'if'
+
           when 'text'
           when 'html'
           end
