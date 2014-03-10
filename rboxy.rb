@@ -1,8 +1,8 @@
 
 require 'pry'
-require '/home/gtraub/projects/rboxy/binders/js/knockout.rb'
+require "#{File.dirname(__FILE__)}/binders/js/knockout.rb"
 module Rboxy
-  #Language class will be the core HTML generator
+  #Builder class will be the core HTML generator
   #implements the bare rules for generating an HTML element
   #or required pieces to form a basic element without any attributes
   #other then id
@@ -36,8 +36,6 @@ module Rboxy
 
       @page_fragments = []
       @current = {}
-      
-
       if(@input.instance_of?(String) && File.exist?(@input))
         file = File.open(@input, 'rb')
         contents = file.read
@@ -118,14 +116,16 @@ module Rboxy
         keys = @current.keys
         (keys - object_keys).each do |key|
           t = Rboxy::MethodHandler.send((key.to_s+'_method').to_sym, @current[key], @current)
-          if (t.instance_of?(String) && !t.empty?)
+          if (t.instance_of?(String) && !t.empty?)#if val is string
             html_acc << " #{t}"
           else
+            #if val is an obect of type listed in @binders it will
+            #probably have multiple outputs to provide like html and js
             if @binders.values.include? t.class
             	case @binders.invert[t.class].to_s
 								when 'js'
-									@js_output<< t.js 
-									html_acc << " #{t.html_attr}"
+                  @js_output<< t.js 
+                  html_acc << " #{t.html_attr}"
 							end           	
             end
           end
@@ -181,9 +181,12 @@ module Rboxy
         #perhaps insert a language interpreter here
       end
     end
-
   end
 
+  class NumberInput
+
+  end
+  
   class MethodHandler   
     def self.method_missing(val, *args)
       parts = val.to_s.match(/([a-zA-Z]+)_method\z/)
@@ -203,7 +206,7 @@ module Rboxy
       binder
     end
 
-    def self.css_method(arg,obj)
+    def self.style_method(arg, obj)
 
     end
     #or just define a handler here ending with '_method'

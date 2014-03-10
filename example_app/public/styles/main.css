@@ -1,0 +1,12 @@
+body{
+	background-color:#efefef;
+	padding:20px;
+	color:#eee;
+	font-weight:bold;
+	width:90%;
+	min-height:600px;
+	font-family: Arial;
+}
+table{
+	background-color:#ccc;
+}

@@ -46,7 +46,7 @@ module Rboxy
         @js << "ko.applyBindings(#{model},document.getElementById('#{@obj[:id]}'));"
         @js <<  %Q<
           $.getJSON("/#{model.downcase}", function(response){
-              $.each(response.#{model}, function(obj,ind){
+              $.each(response, function(ind,obj){
                   #{model}.push(obj)
               })             
           })
