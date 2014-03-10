@@ -13,9 +13,9 @@ module Rboxy
 
     def initialize obj
       @output = {
-      	html: '',
-      	js: '',
-      	css: ''
+        html: '',
+        js: '',
+        css: ''
       }
       @css_output = ''
       @js_output = ''
@@ -25,7 +25,7 @@ module Rboxy
       @css_objects = []
       @js_objects = []
       @binders = {
-      	js: Rboxy::Binders::Knockout
+        js: Rboxy::Binders::Knockout
       }
       @object_nest = []
       @object_index = nil
@@ -122,11 +122,11 @@ module Rboxy
             #if val is an obect of type listed in @binders it will
             #probably have multiple outputs to provide like html and js
             if @binders.values.include? t.class
-            	case @binders.invert[t.class].to_s
-								when 'js'
+              case @binders.invert[t.class].to_s
+              when 'js'
                   @js_output<< t.js 
                   html_acc << " #{t.html_attr}"
-							end           	
+              end
             end
           end
         end
