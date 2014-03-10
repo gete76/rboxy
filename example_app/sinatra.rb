@@ -1,4 +1,4 @@
-require '~/projects/rboxy/rboxy.rb'
+require "#{File.dirname(__FILE__)}/../rboxy.rb"
 require 'sinatra'
 require 'haml'
 require 'json'
