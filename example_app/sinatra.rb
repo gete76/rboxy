@@ -12,7 +12,7 @@ get '/' do
 	@html = output.html_output
 	@js = output.js_output
     #'<html>'+output.html_output+'<script type="text/javascript">'+output.js_output+'</script></html>'
-    haml 'views/layout'
+  haml 'views/layout'
 end
 
 get '/user' do
