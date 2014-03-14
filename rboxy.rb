@@ -1,6 +1,7 @@
 
 require 'pry'
 require "#{File.dirname(__FILE__)}/binders/js/knockout.rb"
+require "#{File.dirname(__FILE__)}/binders/css/css.rb"
 module Rboxy
   #Builder class will be the core HTML generator
   #implements the bare rules for generating an HTML element
@@ -17,37 +18,30 @@ module Rboxy
         js: '',
         css: ''
       }
+      
       @css_output = ''
       @js_output = ''
       @html_output = ''
-      @html_acc = ''
-      @html_objects = []
-      @css_objects = []
-      @js_objects = []
-      @binders = {
-        js: Rboxy::Binders::Knockout
-      }
+
       @object_nest = []
       @object_index = nil
       @object_counter = 0
       @object_index_topology = []
 
       @input = obj
-
       @page_fragments = []
       @current = {}
+
       if(@input.instance_of?(String) && File.exist?(@input))
         file = File.open(@input, 'rb')
         contents = file.read
         @input = eval(contents) #should be a jsonish type object
       end
-      method_command @input
-
     end
      
-    def bind enum
+    def build 
       reset
-      return @html_output
+      method_command @input
     end
     
     protected
@@ -62,7 +56,6 @@ module Rboxy
       @object_counter = 0
       @object_index_topology = []
       @page_fragments = []
-
     end
 
     def box_tags
@@ -74,7 +67,7 @@ module Rboxy
     end
 
     def default_object
-      {tag: 'div', id: generate_id }
+      {tag: 'div', id: generate_id }#id can be overwritten
     end
     #essential keys that non empty objects need for processing
     #and should be part of the core object language
@@ -86,12 +79,12 @@ module Rboxy
       @object_counter += 1
       "objectid_"+ @object_counter.to_s
     end
-
+    #core command behind the :has tag
     def method_command val
       t = ''
       case val
         when String #string can be whatever you want but be careful
-          t = Rboxy::StringInput.handle(val)
+          t = val#Rboxy::StringInput.handle(val)
         when Hash #hash is an html object 
           @current = default_object.merge(val)
           t = make_object
@@ -103,30 +96,26 @@ module Rboxy
       return t
     end
 
-    #the object to HTML generator that will bind css and js observers
-    #to the object by building the js on the server side....here comes the fun part
+    #the object{} to HTML generator that will produce css and js 
+    #and return html to be appended to the html accumulator 
     def make_object
       if !@current.empty?
-        #all objects get incremented ID - ones that have :bind defined get the val appended also.
-        @current[:id] = @current[:id] + '_' + @current[:bind] if @current.has_key?(:bind)
         html_acc = start_object
-        #this is where we bind css or js to the object/element
-        #or interpret non core key => val commands to be defined
-        #by the user, a module, or caught by method_missing
         keys = @current.keys
         (keys - object_keys).each do |key|
-          t = Rboxy::MethodHandler.send((key.to_s+'_method').to_sym, @current[key], @current)
+          handler = Rboxy::MethodHandler.new
+          t = handler.run(key.to_s, @current[key], @current)
           if (t.instance_of?(String) && !t.empty?)#if val is string
-            html_acc << " #{t}"
+            html_acc << " #{t}" 
           else
-            #if val is an obect of type listed in @binders it will
-            #probably have multiple outputs to provide like html and js
-            if @binders.values.include? t.class
-              case @binders.invert[t.class].to_s
-              when 'js'
-                  @js_output<< t.js 
-                  html_acc << " #{t.html_attr}"
-              end
+            if t.instance_variable_defined?('@js')
+              @js_output<< t.js   
+            end
+            if t.instance_variable_defined?('@html')
+              html_acc << " #{t.html}"
+            end
+            if t.instance_variable_defined?('@css')
+              @css_output<< t.css
             end
           end
         end
@@ -150,7 +139,6 @@ module Rboxy
     end
     #this is where the magic starts to generate the next nested object
     def close_object
-      
       #check out the objects collection or HTML children if you will
       has = (@current.has_key?(:has) ? method_command(@current[:has]) : '')
       output = (!inline_tags.index(@current[:tag]) ? ">#{has}</#{@current[:tag]}>" : " />")
@@ -163,54 +151,31 @@ module Rboxy
     
   end
 
-  class StringInput
-    
-    def lang_support
-      %w{ javascript ruby css }
-    end
+  #core class for running non core tags
+  #can always add new binders to this at runtime
+  class MethodHandler
+    attr_accessor :method_list   
+    def initialize
+      @method_list = {
+        bind: Rboxy::Binders::Knockout.new,
+        css: Rboxy::Binders::Css.new
+      }
+    end 
 
-    def self.handle input
-      #matching strings starting with ex ruby: commands
-      t = input.match(/(\A[a-zA-Z]{2,12}):\s/)
-      if t == nil
-        return input
-        #just give back string
-      elsif lang_support.include?(t[1].to_s)
-        
-        #here we can intercept with another language if its in our language list
-        #perhaps insert a language interpreter here
-      end
-    end
-  end
-
-  class NumberInput
-
-  end
-  
-  class MethodHandler   
-    def self.method_missing(val, *args)
-      parts = val.to_s.match(/([a-zA-Z]+)_method\z/)
-      #default match
-      if(parts.length == 2)
-        return "#{parts[1]}=\"#{args[0]}\""
+    def method_missing(val, *args)
+      if(@method_list.key? val)
+        return @method_list[val.to_sym].run(args[0],args[1])
       else
-        #do nothing without raising error
-        #this is useful for where MethodHandler is used other then make_object 
-        return ::StringInput.handle(arg)
+        #default match
+        return "#{val.to_s}=\"#{args[0]}\""
       end
     end
-    #knockout handler
-    def self.bind_method(arg, obj)
-      binder = Rboxy::Binders::Knockout.new(arg, obj)
-      binder.bind
-      binder
-    end
 
-    def self.style_method(arg, obj)
-
-    end
     #or just define a handler here ending with '_method'
     #so {id: 'blah'}  becomes MethodHandler.id_method('blah')
+    def run(key,arg,obj)
+      self.send(key,arg,obj)
+    end 
   end
   
   class ParseError; end
@@ -223,6 +188,7 @@ if(!ARGV.empty? && ($0 == __FILE__))
     contents = file.read
     v = eval(contents)
     t = Rboxy::Builder.new(v)
+    t.build
     puts t.html_output + '<script type="text/javascript">'+t.js_output+'</script>'
   end 
 end

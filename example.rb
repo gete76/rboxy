@@ -1,5 +1,5 @@
-{has: [
-    {tag: 'table' , has: [
+{ has: [
+    {tag: 'table' , css: 'redbox', has: [
         {tag: 'thead', has: [
             {tag: 'tr', has: [
                 {tag: 'th', has: ['First Name'], click: ''},

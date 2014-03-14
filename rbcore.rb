@@ -82,35 +82,34 @@ module Rboxy
 			end
 
 			def hash_method val
-         #@current = default_object.merge(val)
-         t = make_object
+        #@current = default_object.merge(val)
+        t = make_object
 			end
 		end
 	end
 end
 
+module Rboxy
+	class Builder 
+		attr_accessor :output
+		def initialize 
+			@input = nil
+			@output = nil
+			@binders = {
+				tag: Rboxy::Binders::Tag.new,
+				has: Rboxy::Binders::Has.new
+			} 
+		end
+	  
+	  def build input
+	  	@input = input
+	  	run_method @input
+	  end
 
-class Builder 
-	attr_accessor :output
-	def initialize 
-		@input = nil
-		@output = nil
-		@binders = {
-			tag: Rboxy::Binders::Tag.new,
-			has: Rboxy::Binders::Has.new
-		} 
-    
+	  private 
+	  def run_method key, val
+	  	#cls = val.class 
+	  	@binders[key].run(val)
+	  end
 	end
-  
-  def build input
-  	@input = input
-  	run_method @input
-  end
-
-  private 
-  def run_method key, val
-  	#cls = val.class 
-  	@binders[key].run(val)
-  end
 end
-
