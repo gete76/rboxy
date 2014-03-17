@@ -61,8 +61,6 @@ module Rboxy
       def binders
         %w{ foreach if ifnot with text attr visible html }
       end
-
-      
     end
   end
 end

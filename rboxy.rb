@@ -8,7 +8,7 @@ module Rboxy
   #or required pieces to form a basic element without any attributes
   #other then id
   class Builder
-
+    attr_accessor :handler
     attr_writer :input
     attr_reader :css_output, :js_output, :html_output
 
@@ -31,7 +31,7 @@ module Rboxy
       @input = obj
       @page_fragments = []
       @current = {}
-
+      @handler = Rboxy::MethodHandler.new
       if(@input.instance_of?(String) && File.exist?(@input))
         file = File.open(@input, 'rb')
         contents = file.read
@@ -80,6 +80,7 @@ module Rboxy
       "objectid_"+ @object_counter.to_s
     end
     #core command behind the :has tag
+    #and a key way to write a binder handler as well
     def method_command val
       t = ''
       case val
@@ -103,8 +104,7 @@ module Rboxy
         html_acc = start_object
         keys = @current.keys
         (keys - object_keys).each do |key|
-          handler = Rboxy::MethodHandler.new
-          t = handler.run(key.to_s, @current[key], @current)
+          t = @handler.run(key.to_s, @current[key], @current)
           if (t.instance_of?(String) && !t.empty?)#if val is string
             html_acc << " #{t}" 
           else
@@ -166,13 +166,12 @@ module Rboxy
       if(@method_list.key? val)
         return @method_list[val.to_sym].run(args[0],args[1])
       else
-        #default match
+        #default match allows one to just define html attributes
+        #without being interecepeted by a handler
         return "#{val.to_s}=\"#{args[0]}\""
       end
     end
-
-    #or just define a handler here ending with '_method'
-    #so {id: 'blah'}  becomes MethodHandler.id_method('blah')
+    #an alias for send
     def run(key,arg,obj)
       self.send(key,arg,obj)
     end 

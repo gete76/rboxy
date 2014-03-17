@@ -12,7 +12,8 @@
                 {tag: 'td', bind: 'text: last_name'}    
             ]}
         ]}
-    ]}
+    ]},
+    {tag: 'button', has: 'get more', onclick: 'getUsers()'}
 ]}
 
  
