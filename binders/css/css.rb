@@ -1,13 +1,13 @@
 module Rboxy
-    module Binders
-        
-        class Css
-            attr_reader :css
-            def initialize
-                @css = ''
-            end 
+  module Binders  
+    class Css
+      
+      attr_reader :css
+      def initialize
+          @css = ''
+      end 
 
-            def run command, obj
+      def run command, obj
         @css = ''
         @command = command
         @obj = obj
@@ -31,7 +31,7 @@ module Rboxy
             "
         end
       end
-        end
 
     end
+  end
 end
